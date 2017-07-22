@@ -4,6 +4,10 @@
 import os
 import sys
 import zipfile
+from diff2map import diff2map
+
+
+diff_file = ''
 
 
 def unzip_file(f):
@@ -51,9 +55,10 @@ def find_files_size(f):
 
 
 def diff_apks(f1, f2):
+    global diff_file
     cur_dir = os.path.dirname(os.path.abspath(f1))
-    output = cur_dir + '/diff_result.txt'
-    exec_cmd = "git diff --no-index %s %s > %s" % (f1, f2, output)
+    diff_file = cur_dir + '/diff_result.txt'
+    exec_cmd = "git diff --no-index %s %s > %s" % (f1, f2, diff_file)
     os.system(exec_cmd)
 
 
@@ -69,6 +74,7 @@ def main():
     file2 = sys.argv[2]
     result2 = find_files_size(file2)
     diff_apks(result1, result2)
+    diff2map(diff_file)
 
 
 if __name__ == '__main__':
