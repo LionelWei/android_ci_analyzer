@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import csv
 import os
 import sys
 import zipfile
-import csv
-import shutil
 
 FILE_THRESHOLD = 1024
 
@@ -14,7 +13,7 @@ def unzip_file(f):
     check_file(f)
     zip_ref = zipfile.ZipFile(f, 'r')
     dst = os.path.dirname(os.path.abspath(f)) + '/' + os.path.basename(f).split('.')[0]
-    print f + ' ' + dst
+    print 'unzip_file: ' + f + ' ' + dst
     if not os.path.exists(dst):
         os.makedirs(dst)
     zip_ref.extractall(dst)
@@ -36,12 +35,12 @@ def calculate_dex_size(f):
     return dex_size.rstrip()
 
 
-def find_files_size(f, suffix=''):
+def find_files_size(f):
     check_file(f)
     unzipped = unzip_file(f)
     if not os.path.isdir(unzipped):
         raise Exception(unzipped + ' is not directory')
-    output = os.path.abspath(unzipped) + '/../' + os.path.basename(unzipped).split('.')[0] + suffix + ".txt"
+    output = os.path.abspath(unzipped) + '/../' + os.path.basename(unzipped).split('.')[0] + ".txt"
     print 'output ' + output
     out_file = open(output, 'w')
     out_file.close()
@@ -51,11 +50,12 @@ def find_files_size(f, suffix=''):
     os.system(exec_cmd)
     with open(output, "a") as result_file:
         result_file.write(str(dex_size) + ' ./dex\n')
-    shutil.rmtree(unzipped)
     return output
 
 
 def diff_apks(f1, f2):
+    print 'old file result: ' + f1
+    print 'new file result: ' + f2
     cur_dir = os.path.dirname(os.path.abspath(f1))
     diff_file = cur_dir + '/diff_result.txt'
     exec_cmd = "git diff --no-index %s %s > %s" % (f1, f2, diff_file)
@@ -90,7 +90,7 @@ def diff2map(f, debug=False):
         print k, v
     zipped_result = zip(map_result.keys(), map_result.values())
     cur_dir = os.path.dirname(os.path.abspath(f))
-    csv_path = cur_dir + '/diff_csv.csv'
+    csv_path = cur_dir + '/../diff_csv.csv'
     with open(csv_path, 'wb') as f:
         out = sys.stderr if debug else f
         w = csv.writer(out)
