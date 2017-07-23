@@ -4,10 +4,10 @@
 import os
 import sys
 import zipfile
-from diff2map import diff2map
+import csv
+import shutil
 
-
-diff_file = ''
+FILE_THRESHOLD = 1024
 
 
 def unzip_file(f):
@@ -36,12 +36,12 @@ def calculate_dex_size(f):
     return dex_size.rstrip()
 
 
-def find_files_size(f):
+def find_files_size(f, suffix=''):
     check_file(f)
     unzipped = unzip_file(f)
     if not os.path.isdir(unzipped):
         raise Exception(unzipped + ' is not directory')
-    output = os.path.abspath(unzipped) + '/../' + os.path.basename(unzipped).split('.')[0] + ".txt"
+    output = os.path.abspath(unzipped) + '/../' + os.path.basename(unzipped).split('.')[0] + suffix + ".txt"
     print 'output ' + output
     out_file = open(output, 'w')
     out_file.close()
@@ -51,15 +51,51 @@ def find_files_size(f):
     os.system(exec_cmd)
     with open(output, "a") as result_file:
         result_file.write(str(dex_size) + ' ./dex\n')
+    shutil.rmtree(unzipped)
     return output
 
 
 def diff_apks(f1, f2):
-    global diff_file
     cur_dir = os.path.dirname(os.path.abspath(f1))
     diff_file = cur_dir + '/diff_result.txt'
     exec_cmd = "git diff --no-index %s %s > %s" % (f1, f2, diff_file)
     os.system(exec_cmd)
+    diff2map(diff_file)
+
+
+def diff2map(f, debug=False):
+    map_old = {}
+    map_new = {}
+    map_result = {}
+    if not os.path.isfile(f):
+        raise Exception(f + ' does not exist')
+    with open(f) as in_file:
+        for line in in_file:
+            arr = line.rstrip().split(' ')
+            if len(arr) != 2:
+                continue
+            k, v = arr
+            if k.startswith('-') and not k.startswith('--'):
+                map_old[v] = k[1:]
+            elif k.startswith('+') and not k.startswith('++'):
+                map_new[v] = k[1:]
+    for k, v in map_new.items():
+        if k not in map_old:
+            increment = int(v)
+        else:
+            increment = int(v) - int(map_old[k])
+        if increment > FILE_THRESHOLD:
+            map_result[k] = increment
+    for k, v in map_result.items():
+        print k, v
+    zipped_result = zip(map_result.keys(), map_result.values())
+    cur_dir = os.path.dirname(os.path.abspath(f))
+    csv_path = cur_dir + '/diff_csv.csv'
+    with open(csv_path, 'wb') as f:
+        out = sys.stderr if debug else f
+        w = csv.writer(out)
+        for row in zipped_result:
+            w.writerow(row)
 
 
 def main():
@@ -74,7 +110,6 @@ def main():
     file2 = sys.argv[2]
     result2 = find_files_size(file2)
     diff_apks(result1, result2)
-    diff2map(diff_file)
 
 
 if __name__ == '__main__':
